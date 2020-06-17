@@ -15,6 +15,8 @@ The image, the facial box file, and the facial depth image should be end-with '_
 
 
 @article{qin2020learning,
-title={Learning Meta Model for Zero- and Few-shot Face Anti-spoofing},
-author={Qin, Yunxiao and Zhao, Chenxu and Zhu, Xiangyu and Wang, Zezheng and Yu, Zitong and Fu, Tianyu and Zhou, Feng and Shi, Jingping and Lei, Zhen},
-year={2020}}
+  title={Learning meta model for zero-and few-shot face antispoofing},
+  author={Qin, Yunxiao and Zhao, Chenxu and Zhu, Xiangyu and Wang, Zezheng and Yu, Zitong and Fu, Tianyu and Zhou, Feng and Shi, Jingping and Lei, Zhen},
+  journal={Association for Advancement of Artificial Intelligence (AAAI)},
+  year={2020}
+}

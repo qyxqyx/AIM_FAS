@@ -58,20 +58,12 @@ def train(model, saver, sess, hyper_setting, task_generator, resume_itr=0):
     print('Done initializing, starting training.')
     prelosses, postlosses = [], []
 
-    min_FAR = FAR_95 = min_FAR_itr = 1
-    min_FRR = FRR_95 = min_FRR_itr = 1
-    min_HTER = HTER_95 = min_HTER_itr = 1
     min_APCER = APCER_95 = min_APCER_itr = 1
-    max_TNR = TNR_95 = max_TNR_itr = 0
     min_NPCER = NPCER_95 = min_NPCER_itr = 1
-    max_TPR = TPR_95 = max_TPR_itr = 0
     min_ACER = ACER_95 = min_ACER_itr = 1
     min_ACER_pre = ACER_95_pre = min_ACER_pre_itr = 1
-    max_ACC = ACC_95 = max_ACC_itr = 0
 
-    postlosses2way_FAR, postlosses2way_FRR, postlosses2way_HTER = [], [], []
-    postlosses2way_APCER, postlosses2way_TNR, postlosses2way_NPCER = [], [], []
-    postlosses2way_TPR, postlosses2way_ACER, postlosses2way_ACC = [], [], []
+    postlosses2way_APCER, postlosses2way_NPCER, postlosses2way_ACER = [], [], []
 
     for itr in range(resume_itr, FLAGS.metatrain_iterations):
         # 调节learning rate
@@ -124,28 +116,22 @@ def train(model, saver, sess, hyper_setting, task_generator, resume_itr=0):
         input_tensors.extend([model.total_loss1, model.total_losses2[FLAGS.num_updates-1]])
 
         input_tensors.extend(
-            [model.FAR[FLAGS.num_updates-1], model.FRR[FLAGS.num_updates-1], model.HTER[FLAGS.num_updates-1],
-             model.APCER[FLAGS.num_updates-1], model.TNR[FLAGS.num_updates-1],
+            [model.APCER[FLAGS.num_updates-1], 
              model.NPCER[FLAGS.num_updates-1],
-             model.TPR[FLAGS.num_updates-1], model.ACER[FLAGS.num_updates-1],
-             model.ACC[FLAGS.num_updates-1], task_generator.out_faces, task_generator.out_depthes])
+             model.ACER[FLAGS.num_updates-1],
+             task_generator.out_faces, 
+             task_generator.out_depthes])
 
         result = sess.run(input_tensors, feed_dict)
 
         prelosses.append(result[1])
         postlosses.append(result[2])
-        postlosses2way_FAR.append(result[3])
-        postlosses2way_FRR.append(result[4])
-        postlosses2way_HTER.append(result[5])
-        postlosses2way_APCER.append(result[6])
-        postlosses2way_TNR.append(result[7])
-        postlosses2way_NPCER.append(result[8])
-        postlosses2way_TPR.append(result[9])
-        postlosses2way_ACER.append(result[10])
-        postlosses2way_ACC.append(result[11])
+        postlosses2way_APCER.append(result[3])
+        postlosses2way_NPCER.append(result[4])
+        postlosses2way_ACER.append(result[5])
 
-        meta_ims = result[12]
-        meta_depthes = result[13]
+        meta_ims = result[6]
+        meta_depthes = result[7]
         meta_train_ims = meta_ims[:, :FLAGS.num_classes * FLAGS.num_support, :]
         meta_test_ims = meta_ims[:, FLAGS.num_classes * FLAGS.num_support:, :]
         meta_train_lbls = meta_depthes[:, :FLAGS.num_classes * FLAGS.num_support, :]
@@ -155,22 +141,13 @@ def train(model, saver, sess, hyper_setting, task_generator, resume_itr=0):
             print_str = 'Iteration ' + str(itr)
             print_str += ': ' + str(np.mean(prelosses)) + ', ' + str(np.mean(postlosses))
 
-            print_str += ', ' + str(np.mean(postlosses2way_FAR)) \
-                         + ', ' + str(np.mean(postlosses2way_FRR)) \
-                         + ', ' + str(np.mean(postlosses2way_HTER)) \
-                         + ', ' + str(np.mean(postlosses2way_APCER)) \
-                         + ', ' + str(np.mean(postlosses2way_TNR)) \
+            print_str += ', ' + str(np.mean(postlosses2way_APCER)) \
                          + ', ' + str(np.mean(postlosses2way_NPCER)) \
-                         + ', ' + str(np.mean(postlosses2way_TPR)) \
-                         + ', ' + str(np.mean(postlosses2way_ACER)) \
-                         + ', ' + str(np.mean(postlosses2way_ACC))
+                         + ', ' + str(np.mean(postlosses2way_ACER)) 
             print(str(datetime.datetime.now())[:-7], print_str)
             prelosses, postlosses = [], []
 
-            postlosses2way_FAR, postlosses2way_FRR, postlosses2way_HTER = [], [], []
-            postlosses2way_APCER, postlosses2way_TNR, postlosses2way_NPCER = [], [], []
-            postlosses2way_TPR, postlosses2way_ACER, postlosses2way_ACC = [], [], []
-
+            postlosses2way_APCER, postlosses2way_NPCER, postlosses2way_ACER = [], [], []
 
         if (itr!=0) and itr % TEST_PRINT_INTERVAL == 0:
             metaval_accuracies = []
@@ -208,9 +185,8 @@ def train(model, saver, sess, hyper_setting, task_generator, resume_itr=0):
                 sess.run(task_generator.iterators, feed_dict=feed_dict_data_test)
 
                 input_tensors = [[model.metaval_total_loss1] + model.metaval_total_losses2 +
-                                 model.metaval_FAR + model.metaval_FRR + model.metaval_HTER + model.metaval_APCER +
-                                 model.metaval_TNR + model.metaval_NPCER + model.metaval_TPR + model.metaval_ACER +
-                                 model.metaval_ACC, task_generator.out_faces, task_generator.out_depthes]
+                                 model.metaval_APCER + model.metaval_NPCER + model.metaval_ACER,
+                                 task_generator.out_faces, task_generator.out_depthes]
 
                 result = sess.run(input_tensors, feed_dict_test)
                 metaval_accuracies.append(result[0])
@@ -230,103 +206,44 @@ def train(model, saver, sess, hyper_setting, task_generator, resume_itr=0):
             print('Mean validation 95_range:', ci95[:1 +  FLAGS.test_num_updates])
             print('----------------------------------------------', )
 
-            print('Mean validation FAR:', means[   (FLAGS.test_num_updates+1):  2 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation FAR_95:', ci95[   (FLAGS.test_num_updates+1):  2 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation FRR:', means[  2 *  (FLAGS.test_num_updates+1):  3 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation FRR_95:', ci95[  2 *  (FLAGS.test_num_updates+1):  3 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation HTER:', means[  3 *  (FLAGS.test_num_updates+1):  4 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation HTER_95:', ci95[  3 *  (FLAGS.test_num_updates+1):  4 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation APCER:', means[  4 *  (FLAGS.test_num_updates+1):  5 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation APCER_95:', ci95[  4 *  (FLAGS.test_num_updates+1):  5 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation TNR:', means[  5 *  (FLAGS.test_num_updates+1):  6 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation TNR_95:', ci95[  5 *  (FLAGS.test_num_updates+1):  6 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation NPCER:', means[  6 *  (FLAGS.test_num_updates+1):  7 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation NPCER_95:', ci95[  6 *  (FLAGS.test_num_updates+1):  7 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation TPR:', means[  7 *  (FLAGS.test_num_updates+1):  8 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation TPR_95:', ci95[  7 *  (FLAGS.test_num_updates+1):  8 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation ACER:', means[  8 *  (FLAGS.test_num_updates+1):  9 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation ACER_95:', ci95[  8 *  (FLAGS.test_num_updates+1):  9 *  (FLAGS.test_num_updates+1)])
-            print('Mean validation ACC:', means[  9 *  (FLAGS.test_num_updates+1):])
-            print('Mean validation ACC_95:', ci95[  9 *  (FLAGS.test_num_updates+1):])
+            print('Mean validation APCER:', means[   (FLAGS.test_num_updates+1):  2 *  (FLAGS.test_num_updates+1)])
+            print('Mean validation APCER_95:', ci95[   (FLAGS.test_num_updates+1):  2 *  (FLAGS.test_num_updates+1)])
+            print('Mean validation NPCER:', means[  2 *  (FLAGS.test_num_updates+1):  3 *  (FLAGS.test_num_updates+1)])
+            print('Mean validation NPCER_95:', ci95[  2 *  (FLAGS.test_num_updates+1):  3 *  (FLAGS.test_num_updates+1)])
+            print('Mean validation ACER:', means[  3 *  (FLAGS.test_num_updates+1): ])
+            print('Mean validation ACER_95:', ci95[  3 *  (FLAGS.test_num_updates+1): ])
 
-            if min_FAR > min(means[   (FLAGS.test_num_updates+1):  2 *  (FLAGS.test_num_updates+1)]):
-                min_FAR = min(means[   (FLAGS.test_num_updates+1):  2 *  (FLAGS.test_num_updates+1)])
-                index = np.where(means[   (FLAGS.test_num_updates+1):  2 *  (FLAGS.test_num_updates+1)] == min_FAR)
-                FAR_95 = ci95[   (FLAGS.test_num_updates+1):  2 *  (FLAGS.test_num_updates+1)][index][0]
-                min_FAR_itr = itr
-            print('Min validation FAR is  :', min_FAR, '  ;', '95% range is:', FAR_95, '  ;', 'iteration is:',
-                  min_FAR_itr)
-
-            if min_FRR > min(means[  2 *  (FLAGS.test_num_updates+1):  3 *  (FLAGS.test_num_updates+1)]):
-                min_FRR = min(means[  2 *  (FLAGS.test_num_updates+1):  3 *  (FLAGS.test_num_updates+1)])
-                index = np.where(means[  2 *  (FLAGS.test_num_updates+1):  3 *  (FLAGS.test_num_updates+1)] == min_FRR)
-                FRR_95 = ci95[  2 *  (FLAGS.test_num_updates+1):  3 *  (FLAGS.test_num_updates+1)][index][0]
-                min_FRR_itr = itr
-            print('Min validation FRR is  :', min_FRR, '  ;', '95% range is:', FRR_95, '  ;', 'iteration is:',
-                  min_FRR_itr)
-
-            if min_HTER > min(means[  3 *  (FLAGS.test_num_updates+1):  4 *  (FLAGS.test_num_updates+1)]):
-                min_HTER = min(means[  3 *  (FLAGS.test_num_updates+1):  4 *  (FLAGS.test_num_updates+1)])
-                index = np.where(means[  3 *  (FLAGS.test_num_updates+1):  4 *  (FLAGS.test_num_updates+1)] == min_HTER)
-                HTER_95 = ci95[  3 *  (FLAGS.test_num_updates+1):  4 *  (FLAGS.test_num_updates+1)][index][0]
-                min_HTER_itr = itr
-            print('Min validation HTER is :', min_HTER, '  ;', '95% range is:', HTER_95, '  ;', 'iteration is:',
-                  min_HTER_itr)
-
-            if min_APCER > min(means[  4 *  (FLAGS.test_num_updates+1):  5 *  (FLAGS.test_num_updates+1)]):
-                min_APCER = min(means[  4 *  (FLAGS.test_num_updates+1):  5 *  (FLAGS.test_num_updates+1)])
-                index = np.where(means[  4 *  (FLAGS.test_num_updates+1):  5 *  (FLAGS.test_num_updates+1)] == min_APCER)
-                APCER_95 = ci95[  4 *  (FLAGS.test_num_updates+1):  5 *  (FLAGS.test_num_updates+1)][index][0]
+            if min_APCER > min(means[   (FLAGS.test_num_updates+1):  2 *  (FLAGS.test_num_updates+1)]):
+                min_APCER = min(means[   (FLAGS.test_num_updates+1):  2 *  (FLAGS.test_num_updates+1)])
+                index = np.where(means[   (FLAGS.test_num_updates+1):  2 *  (FLAGS.test_num_updates+1)] == min_APCER)
+                APCER_95 = ci95[   (FLAGS.test_num_updates+1):  2 *  (FLAGS.test_num_updates+1)][index][0]
                 min_APCER_itr = itr
-            print('Min validation APCER is:', min_APCER, '  ;', '95% range is:', APCER_95, '  ;', 'iteration is:',
+            print('Min validation APCER is  :', min_APCER, '  ;', '95% range is:', APCER_95, '  ;', 'iteration is:',
                   min_APCER_itr)
 
-            if max_TNR < max(means[  5 *  (FLAGS.test_num_updates+1):  6 *  (FLAGS.test_num_updates+1)]):
-                max_TNR = max(means[  5 *  (FLAGS.test_num_updates+1):  6 *  (FLAGS.test_num_updates+1)])
-                index = np.where(means[  5 *  (FLAGS.test_num_updates+1):  6 *  (FLAGS.test_num_updates+1)] == max_TNR)
-                TNR_95 = ci95[  5 *  (FLAGS.test_num_updates+1):  6 *  (FLAGS.test_num_updates+1)][index][0]
-                max_TNR_itr = itr
-            print('Max validation TNR is  :', max_TNR, '  ;', '95% range is:', TNR_95, '  ;', 'iteration is:',
-                  max_TNR_itr)
-
-            if min_NPCER > min(means[  6 *  (FLAGS.test_num_updates+1):  7 *  (FLAGS.test_num_updates+1)]):
-                min_NPCER = min(means[  6 *  (FLAGS.test_num_updates+1):  7 *  (FLAGS.test_num_updates+1)])
-                index = np.where(means[  6 *  (FLAGS.test_num_updates+1):  7 *  (FLAGS.test_num_updates+1)] == min_NPCER)
-                NPCER_95 = ci95[  6 *  (FLAGS.test_num_updates+1):  7 *  (FLAGS.test_num_updates+1)][index][0]
+            if min_NPCER > min(means[  2 *  (FLAGS.test_num_updates+1):  3 *  (FLAGS.test_num_updates+1)]):
+                min_NPCER = min(means[  2 *  (FLAGS.test_num_updates+1):  3 *  (FLAGS.test_num_updates+1)])
+                index = np.where(means[  2 *  (FLAGS.test_num_updates+1):  3 *  (FLAGS.test_num_updates+1)] == min_NPCER)
+                NPCER_95 = ci95[  2 *  (FLAGS.test_num_updates+1):  3 *  (FLAGS.test_num_updates+1)][index][0]
                 min_NPCER_itr = itr
-            print('Min validation NPCER is:', min_NPCER, '  ;', '95% range is:', NPCER_95, '  ;', 'iteration is:',
+            print('Min validation FRR is  :', min_NPCER, '  ;', '95% range is:', NPCER_95, '  ;', 'iteration is:',
                   min_NPCER_itr)
 
-            if max_TPR < max(means[  7 *  (FLAGS.test_num_updates+1):  8 *  (FLAGS.test_num_updates+1)]):
-                max_TPR = max(means[  7 *  (FLAGS.test_num_updates+1):  8 *  (FLAGS.test_num_updates+1)])
-                index = np.where(means[  7 *  (FLAGS.test_num_updates+1):  8 *  (FLAGS.test_num_updates+1)] == max_TPR)
-                TPR_95 = ci95[  7 *  (FLAGS.test_num_updates+1):  8 *  (FLAGS.test_num_updates+1)][index][0]
-                max_TPR_itr = itr
-            print('Max validation TPR is  :', max_TPR, '  ;', '95% range is:', TPR_95, '  ;', 'iteration is:',
-                  max_TPR_itr)
-
-            if min_ACER > min(means[8*(FLAGS.test_num_updates+1)+1: 9*(FLAGS.test_num_updates+1)]):
-                min_ACER = min(means[8*(FLAGS.test_num_updates+1)+1:  9*(FLAGS.test_num_updates+1)])
-                index = np.where(means[8*(FLAGS.test_num_updates+1)+1:  9*(FLAGS.test_num_updates+1)] == min_ACER)
-                ACER_95 = ci95[8*(FLAGS.test_num_updates+1)+1:  9*(FLAGS.test_num_updates+1)][index][0]
+            if min_ACER > min(means[  3 *  (FLAGS.test_num_updates+1):  ]):
+                min_ACER = min(means[  3 *  (FLAGS.test_num_updates+1):  ])
+                index = np.where(means[  3 *  (FLAGS.test_num_updates+1):  ] == min_ACER)
+                ACER_95 = ci95[  3 *  (FLAGS.test_num_updates+1):  4 *  (FLAGS.test_num_updates+1)][index][0]
                 min_ACER_itr = itr
-            print('Min validation ACER is :', min_ACER, '  ;', '95% range is:', ACER_95, '  ;', 'iteration is:',
+            print('Min validation HTER is :', min_ACER, '  ;', '95% range is:', ACER_95, '  ;', 'iteration is:',
                   min_ACER_itr)
 
-            if min_ACER_pre > means[8*(FLAGS.test_num_updates+1)+1]:
-                min_ACER_pre = means[8*(FLAGS.test_num_updates+1)+1]
-                ACER_95_pre = ci95[8*(FLAGS.test_num_updates+1)+1]
+            if min_ACER_pre > means[3*(FLAGS.test_num_updates+1)+1]:
+                min_ACER_pre = means[3*(FLAGS.test_num_updates+1)+1]
+                ACER_95_pre = ci95[3*(FLAGS.test_num_updates+1)+1]
                 min_ACER_pre_itr = itr
             print('Min validation ACER is :', min_ACER_pre, '  ;', '95% range is:', ACER_95_pre, '  ;', 'iteration is:',
                   min_ACER_pre_itr)
 
-            if max_ACC < max(means[  9 *  (FLAGS.test_num_updates+1):]):
-                max_ACC = max(means[  9 *  (FLAGS.test_num_updates+1):])
-                index = np.where(means[  9 *  (FLAGS.test_num_updates+1):] == max_ACC)
-                ACC_95 = ci95[  9 *  (FLAGS.test_num_updates+1):][index][0]
-                max_ACC_itr = itr
-            print('Max validation ACC is  :', max_ACC, '  ;', '95% range is:', ACC_95, '  ;', 'iteration is:',
-                  max_ACC_itr)
             print('----------------------------------------', )
 
             saver.save(sess, FLAGS.logdir + '/' + hyper_setting +  '/model' + str(itr))
@@ -369,9 +286,8 @@ def test(model, sess, task_generator):
         sess.run(task_generator.iterators, feed_dict=feed_dict_data_test)
 
         input_tensors = [[model.metaval_total_loss1] + model.metaval_total_losses2 +
-                         model.metaval_FAR + model.metaval_FRR + model.metaval_HTER + model.metaval_APCER +
-                         model.metaval_TNR + model.metaval_NPCER + model.metaval_TPR + model.metaval_ACER +
-                         model.metaval_ACC, task_generator.out_faces, task_generator.out_depthes]
+                         model.metaval_APCER + model.metaval_NPCER + model.metaval_ACER,
+                         task_generator.out_faces, task_generator.out_depthes]
 
         result = sess.run(input_tensors, feed_dict_test)
         metaval_accuracies.append(result[0])
@@ -391,26 +307,14 @@ def test(model, sess, task_generator):
     print('Mean validation 95_range:', ci95[:1 + FLAGS.test_num_updates])
     print('----------------------------------------------', )
 
-    print('Mean validation FAR:', means[(FLAGS.test_num_updates + 1):  2 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation FAR_95:', ci95[(FLAGS.test_num_updates + 1):  2 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation FRR:', means[2 * (FLAGS.test_num_updates + 1):  3 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation FRR_95:', ci95[2 * (FLAGS.test_num_updates + 1):  3 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation HTER:', means[3 * (FLAGS.test_num_updates + 1):  4 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation HTER_95:', ci95[3 * (FLAGS.test_num_updates + 1):  4 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation APCER:', means[4 * (FLAGS.test_num_updates + 1):  5 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation APCER_95:', ci95[4 * (FLAGS.test_num_updates + 1):  5 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation TNR:', means[5 * (FLAGS.test_num_updates + 1):  6 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation TNR_95:', ci95[5 * (FLAGS.test_num_updates + 1):  6 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation NPCER:', means[6 * (FLAGS.test_num_updates + 1):  7 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation NPCER_95:', ci95[6 * (FLAGS.test_num_updates + 1):  7 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation TPR:', means[7 * (FLAGS.test_num_updates + 1):  8 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation TPR_95:', ci95[7 * (FLAGS.test_num_updates + 1):  8 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation ACER:', means[8 * (FLAGS.test_num_updates + 1):  9 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation ACER_95:', ci95[8 * (FLAGS.test_num_updates + 1):  9 * (FLAGS.test_num_updates + 1)])
-    print('Mean validation ACC:', means[9 * (FLAGS.test_num_updates + 1):])
-    print('Mean validation ACC_95:', ci95[9 * (FLAGS.test_num_updates + 1):])
-    print('Mean validation ACER_pre:',  means[8 * (FLAGS.test_num_updates + 1) + 1])
-    acer = min(means[8 * (FLAGS.test_num_updates + 1) + 1:  9 * (FLAGS.test_num_updates + 1)])
+    print('Mean validation APCER:', means[(FLAGS.test_num_updates + 1):  2 * (FLAGS.test_num_updates + 1)])
+    print('Mean validation APCER_95:', ci95[(FLAGS.test_num_updates + 1):  2 * (FLAGS.test_num_updates + 1)])
+    print('Mean validation NPCER:', means[2 * (FLAGS.test_num_updates + 1):  3 * (FLAGS.test_num_updates + 1)])
+    print('Mean validation NPCER_95:', ci95[2 * (FLAGS.test_num_updates + 1):  3 * (FLAGS.test_num_updates + 1)])
+    print('Mean validation ACER:', means[3 * (FLAGS.test_num_updates + 1):  ])
+    print('Mean validation ACER_95:', ci95[3 * (FLAGS.test_num_updates + 1):  ])
+    print('Mean validation ACER_pre:',  means[3 * (FLAGS.test_num_updates + 1) + 1])
+    acer = min(means[3 * (FLAGS.test_num_updates + 1) + 1:  ])
 
     return acer
 
